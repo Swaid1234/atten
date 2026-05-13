@@ -31,7 +31,7 @@
     #bg {
       position: fixed;
       inset: 0;
-      background-image: url('YOUR_BACKGROUND_IMAGE.jpg'); /* ← ضع رابط صورتك هنا */
+      background-image: url('YOUR_BACKGROUND_IMAGE.jpg');
       background-size: cover;
       background-position: center;
       filter: brightness(0.45);
@@ -47,7 +47,7 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 32px;
+      gap: 28px;
     }
 
     .header { text-align: center; }
@@ -85,13 +85,12 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 18px;
+      gap: 14px;
       cursor: pointer;
       transition: transform .28s, box-shadow .28s, border-color .28s;
       user-select: none;
       position: relative;
       overflow: hidden;
-      text-decoration: none;
     }
     .card::before {
       content: '';
@@ -100,18 +99,37 @@
       background: radial-gradient(circle at 50% 0%, rgba(201,168,76,0.12), transparent 70%);
       pointer-events: none;
     }
-    .card:hover {
+    .card:hover:not(.disabled) {
       transform: translateY(-6px) scale(1.02);
       border-color: var(--gold);
       box-shadow: 0 16px 48px rgba(0,0,0,0.6), 0 0 30px rgba(201,168,76,0.2);
     }
-    .card:active { transform: scale(0.97); }
+    .card:active:not(.disabled) { transform: scale(0.97); }
     .card-icon { font-size: 3rem; filter: drop-shadow(0 0 12px rgba(201,168,76,0.5)); }
     .card-title { font-size: 1.35rem; font-weight: 700; color: var(--gold-light); }
-    .card-sub { font-size: 0.82rem; color: rgba(255,255,255,0.45); text-align: center; line-height: 1.5; }
+    .card-sub { font-size: 0.82rem; color: rgba(255,255,255,0.45); text-align: center; line-height: 1.6; }
+    .card-time { font-size: 0.75rem; color: rgba(255,255,255,0.25); text-align: center; }
 
-    .card.checkin:hover  { box-shadow: 0 16px 48px rgba(0,0,0,0.6), 0 0 30px rgba(46,204,113,0.25); border-color: var(--success); }
-    .card.checkout:hover { box-shadow: 0 16px 48px rgba(0,0,0,0.6), 0 0 30px rgba(231,76,60,0.25); border-color: var(--danger); }
+    .card.checkin:hover:not(.disabled)  { border-color: var(--success); box-shadow: 0 16px 48px rgba(0,0,0,0.6), 0 0 30px rgba(46,204,113,0.25); }
+    .card.checkout:hover:not(.disabled) { border-color: var(--danger);  box-shadow: 0 16px 48px rgba(0,0,0,0.6), 0 0 30px rgba(231,76,60,0.25); }
+
+    .card.disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+      pointer-events: none;
+      filter: grayscale(0.4);
+    }
+
+    .time-badge {
+      font-size: 0.75rem;
+      padding: 4px 14px;
+      border-radius: 20px;
+      font-weight: 700;
+    }
+    .time-badge.open   { background: rgba(46,204,113,0.2);  color: #55efc4; border: 1px solid rgba(46,204,113,0.3); }
+    .time-badge.closed { background: rgba(231,76,60,0.15);  color: #ff7675; border: 1px solid rgba(231,76,60,0.3); }
+
+    @keyframes fadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
   </style>
 </head>
 <body>
@@ -124,21 +142,26 @@
   </div>
 
   <div class="cards">
-    <a class="card checkin" href="https://forms.gle/NoEXqypNxk2Jjt8a8" target="_self">
+    <div class="card checkin" id="card-checkin" onclick="go('checkin')">
       <div class="card-icon">✅</div>
       <div class="card-title">تسجيل الحضور</div>
-      <div class="card-sub">اضغط للانتقال لنموذج الحضور</div>
-    </a>
-    <a class="card checkout" href="https://forms.gle/5e6T1AtHJ6yM3Dp48" target="_self">
+      <div class="card-sub" id="sub-checkin"></div>
+      <div class="time-badge" id="badge-checkin"></div>
+      <div class="card-time" id="time-checkin"></div>
+    </div>
+
+    <div class="card checkout" id="card-checkout" onclick="go('checkout')">
       <div class="card-icon">🚪</div>
       <div class="card-title">تسجيل الانصراف</div>
-      <div class="card-sub">اضغط للانتقال لنموذج الانصراف</div>
-    </a>
+      <div class="card-sub" id="sub-checkout"></div>
+      <div class="time-badge" id="badge-checkout"></div>
+      <div class="card-time" id="time-checkout"></div>
+    </div>
   </div>
 </div>
 
 <script>
-   // ============================================================
+  // ============================================================
   //  ⏰ عدّل التوقيتات هنا — الصيغة 24 ساعة
   // ============================================================
   const TIMES = {
@@ -148,7 +171,7 @@
     },
     checkout: {
       start: { h: 16, m: 0 },   // ← بداية وقت الانصراف
-      end:   { h: 18, m: 0 },   // ← نهاية وقت الانصراف
+      end:   { h: 20, m: 0 },   // ← نهاية وقت الانصراف
     },
   };
 
@@ -203,13 +226,21 @@
     });
   }
 
+  function go(type) {
+    if (!isOpen(type)) return;
+    window.location.href = URLS[type];
+  }
+
   function updateClock() {
     document.getElementById('clock').textContent =
       new Date().toLocaleDateString('ar-SA', {weekday:'long', year:'numeric', month:'long', day:'numeric'}) +
       '  |  ' + new Date().toLocaleTimeString('ar-SA');
   }
+
   updateClock();
+  updateCards();
   setInterval(updateClock, 1000);
+  setInterval(updateCards, 30000);
 </script>
 </body>
 </html>
