@@ -138,6 +138,25 @@
 </div>
 
 <script>
+  // ============================================================
+  //  ⏰ عدّل التوقيتات هنا — الصيغة 24 ساعة
+  // ============================================================
+  const TIMES = {
+    checkin: {
+      start: { h: 7,  m: 0 },   // ← بداية وقت الحضور
+      end:   { h: 9,  m: 0 },   // ← نهاية وقت الحضور
+    },
+    checkout: {
+      start: { h: 16, m: 0 },   // ← بداية وقت الانصراف
+      end:   { h: 18, m: 0 },   // ← نهاية وقت الانصراف
+    },
+  };
+ 
+  const URLS = {
+    checkin:  'https://forms.gle/ykv99FbvJip7Fhp99',
+    checkout: 'https://forms.gle/FsHitkRbXJizgbZJ8',
+  };
+  // ============================================================
   function updateClock() {
     document.getElementById('clock').textContent =
       new Date().toLocaleDateString('ar-SA', {weekday:'long', year:'numeric', month:'long', day:'numeric'}) +
